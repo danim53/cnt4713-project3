@@ -1,0 +1,7 @@
+CNT4713 Cryptography Project Answers
+
+1. How could the “secure” server and client framework be compromised?
+[answer here]
+
+2. How could you improve the framework?
+[answer here]
