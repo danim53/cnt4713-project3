@@ -1,63 +1,72 @@
 import socket
-from idlelib.undo import Command
 import rsa
 import hashlib
-from multiprocessing import connection
 
-HOST ="127.0.0.1"
+HOST = "127.0.0.1"
 CONTROL_PORT = 8080
 
-print("Starting Server...")
-print("Creating RSA keypair")
-public_key, private_key = rsa.newkeys(512)
-print("RSA keypair created")
+def main():
+    print("Starting server…")
+    print("Creating RSA keypair")
+    public_key, private_key = rsa.newkeys(1024)
+    print("RSA keypair created")
 
-print("Creating server socket")
-server = socket.socket()
-server.bind((HOST, CONTROL_PORT))
-server.listen()
+    server = socket.socket()
+    server.bind((HOST, CONTROL_PORT))
+    server.listen(1)
 
-print("Awaiting connection...")
-connect, addr = server.accept()
+    print("Awaiting connections…")
+    
+    while True:
+        connect, addr = server.accept()
+        
+        command = connect.recv(1024).decode()
+        
+        if command == "connect":
+            data_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            data_server.bind((HOST, 0))
+            data_server.listen(1)
+            
+            port = data_server.getsockname()[1]
+            connect.send(str(port).encode())
+            
+            data_connection, data_addr = data_server.accept()
+            
+            client_public_key = None
+            
+            while True:
+                command = data_connection.recv(1024).decode()
+                if not command:
+                    break
+                
+                if command == "tunnel":
+                    data_connection.send(b"OK")
+                    client_key_pem = data_connection.recv(4096)
+                    client_public_key = rsa.PublicKey.load_pkcs1(client_key_pem)
+                    data_connection.send(public_key.save_pkcs1("PEM"))
+                    
+                elif command == "post":
+                    print("Post requested.")
+                    data_connection.send(b"OK")
+                    
+                    encrypted = data_connection.recv(4096)
+                    
+                    # decrypt message
+                    message = rsa.decrypt(encrypted, private_key).decode()
+                    print(f"Decrypted message: {message}")
+                    
+                    # compute hash
+                    msg_hash = hashlib.sha256(message.encode()).hexdigest()
+                    print(f"Responding with hash: {msg_hash}")
+                    
+                    # encrypt hash with client's public key
+                    encrypted_hash = rsa.encrypt(msg_hash.encode(), client_public_key)
+                    data_connection.send(encrypted_hash)
+                    break
+                    
+            data_connection.close()
+            data_server.close()
+        connect.close()
 
-# command
-command = connect.recv(1024).decode()
-
-if command == "CONNECT":
-    print("Connection requested. Creating data soket")
-    data_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    data_server.bind((HOST, CONTROL_PORT))
-    data_server.listen()
-
-    port = data_server.getsockname()[1]
-    data_server.sendto(command.encode(), (HOST, port))
-
-    data_connection, addr = server.accept()
-
-
-
-
-# Post
-command = data_connection.recv(1024).decode()
-if command == "POST":
-    print("POST requested.")
-
-    encypted = data_connection.recv(4096)
-    print("Recieved encrypted message:", encypted)
-
-    #decrpt message
-    message = rsa.decrypt(encypted, private_key).decode()
-    print("Decrypted message:", message)
-
-    print("Computing hash")
-    hash = hashlib.sha256(message.encode()).hexdigest()
-
-    #encrypt hash
-    hash = hashlib.sha256(hash.encode(), client_public_key)
-    print("Responding with hash:", hash)
-    data_connection.send(encypted_hash)
-
-
-
-
-
+if __name__ == "__main__":
+    main()
