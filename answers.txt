@@ -1,7 +1,18 @@
-CNT4713 Cryptography Project Answers
+CNT4713 Project 3 Answers
 
 1. How could the “secure” server and client framework be compromised?
-[answer here]
+
+Although this framework uses RSA encryption and SHA256 hashing to secure it, there are still ways it could be compromised.
+One example is man-in-the-middle attacks. The client and server exchange public keys, but there is no verification that the key actually belongs to the
+correct party. If an attacker intercepts the connection, they could insert their own public key instead and read or change the message being sent.
+Another possible issue would be replay attacks. An attacker could capture an encrypted message or hash and send it again later.
+Since this framework doesn't include timestamps or unique session identifiers,the repeated message could be considered valid.
+Other affecting factors are if the private keys are stolen, if bad input is accepted, or if there is no safe error handling within the program.
+While SHA256 helps verify message integrity, it doesn't guarantee who actually sent the message.
 
 2. How could you improve the framework?
-[answer here]
+
+One way that could improve the framework would be to add authentication for public keys. For example, digital certificates could be used so the client knows
+that it is talking to the correct server. This would make man-in-the-middle attacks much more difficult. Another implement would be to include timestamps or unique
+session values in the messages to prevent replay attacks from occurring. Digital signatures could also be added so that the receiver
+can verify both the message integrity and sender identity. Other improvements include stronger error handling, inout validation, and stronger protection of private keys.
