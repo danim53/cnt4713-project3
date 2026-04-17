@@ -8,8 +8,11 @@ CONTROL_PORT = 8080
 def main():
     print('Starting client…')
     # Generate key pair without printing (as per Example Output)
+    print("Creating RSA keypair")
     public_key, private_key = rsa.newkeys(1024)
+    print("RSA keypair created")
 
+    print("Creating client socket")
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     print('Connecting to server')
@@ -19,10 +22,12 @@ def main():
 
     data_port = int(client_socket.recv(4096).decode())
 
+    print("Creating data socket")
     data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     data_socket.connect((HOST, data_port))
 
     # Requesting tunnel
+    print("Requesting tunnel")
     data_socket.send("tunnel".encode())
     data_socket.recv(1024) # wait for OK
     
@@ -33,7 +38,8 @@ def main():
     # Receive server public key
     server_key_txt = data_socket.recv(4096)
     server_public_key = rsa.PublicKey.load_pkcs1(server_key_txt)
-    
+
+    print("Server public key received")
     print("Tunnel established")
 
     message = "Hello"
@@ -41,6 +47,8 @@ def main():
 
     # Encrypt message
     encrypted_msg = rsa.encrypt(message.encode(), server_public_key)
+
+    print(f"Sending encrypted message: {encrypted_msg}")
 
     # Post message
     data_socket.send("post".encode())
@@ -50,6 +58,8 @@ def main():
     # Receive encrypted hash
     encrypted_hash = data_socket.recv(4096)
     print("Received hash")
+
+    print("Computing hash")
     
     # Decrypt hash
     returned_hash = rsa.decrypt(encrypted_hash, private_key).decode()

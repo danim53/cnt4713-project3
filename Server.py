@@ -11,6 +11,7 @@ def main():
     public_key, private_key = rsa.newkeys(1024)
     print("RSA keypair created")
 
+    print("Creating server socket")
     server = socket.socket()
     server.bind((HOST, CONTROL_PORT))
     server.listen(1)
@@ -23,6 +24,7 @@ def main():
         command = connect.recv(1024).decode()
         
         if command == "connect":
+            print("Connection requested. Creating data socket")
             data_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             data_server.bind((HOST, 0))
             data_server.listen(1)
@@ -40,6 +42,8 @@ def main():
                     break
                 
                 if command == "tunnel":
+                    print("Tunnel requested. Sending public key")
+
                     data_connection.send(b"OK")
                     client_key_pem = data_connection.recv(4096)
                     client_public_key = rsa.PublicKey.load_pkcs1(client_key_pem)
@@ -50,10 +54,13 @@ def main():
                     data_connection.send(b"OK")
                     
                     encrypted = data_connection.recv(4096)
+                    print(f"Received encrypted message: {encrypted}")
                     
                     # decrypt message
                     message = rsa.decrypt(encrypted, private_key).decode()
                     print(f"Decrypted message: {message}")
+
+                    print("Computing hash")
                     
                     # compute hash
                     msg_hash = hashlib.sha256(message.encode()).hexdigest()
